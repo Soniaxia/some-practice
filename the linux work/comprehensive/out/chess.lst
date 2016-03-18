@@ -1,0 +1,199 @@
+C51 COMPILER V9.00   CHESS                                                                 07/16/2015 15:30:36 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE CHESS
+OBJECT MODULE PLACED IN ..\out\chess.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\app\chess.c LARGE BROWSE INCDIR(..\include\drivers;..\include\app;..\inc
+                    -lude\gui;..\net\eth;..\net\USIP) DEBUG OBJECTEXTEND PRINT(..\out\chess.lst) OBJECT(..\out\chess.obj)
+
+line level    source
+
+   1          
+   2          
+   3          /*五子棋应用*/
+   4          
+   5          #include <STC_12.h>
+   6          #include "tft_9325.h"
+   7          #include "touch.h"
+   8          #include <stdio.h>
+   9          #include "app.h"
+  10          #include <gui.h>
+  11          uchar ifput[11][11];
+  12          char str[20];
+  13          
+  14          void DrawPlate();                                                         //绘制棋盘
+  15          uchar ifSomeOneWin(uchar x,uchar y);              //判断输赢
+  16          
+  17          
+  18          /*五子棋入口函数*/
+  19          void Chess(void)
+  20          {
+  21   1              unsigned char user;
+  22   1              bit flag=0;
+  23   1              unsigned int x,y;
+  24   1              unsigned int point[2];
+  25   1              TFT_Init();
+  26   1              ClearScreen(Green);                                             //背景为绿色
+  27   1              DrawPlate();                                                //绘制棋盘
+  28   1              DrawClose();                                                //绘制中途退出按钮
+  29   1              while(1)
+  30   1              {
+  31   2                      T_GetPoint(point);                                      //获取按下屏幕的坐标
+  32   2                      if(JugeClose(point)==1)
+  33   2                              return;
+  34   2                      if(point[0]<=50||point[0]>=270||point[1]<=10||point[1]>=230)              //如果点击棋盘以为的地方，没有任何反应
+  35   2                              continue;
+  36   2                      x=(point[0]-50)/22;                       //获取点击的位置位于棋盘的哪个地方
+  37   2                      y=(point[1]-10)/22;
+  38   2      
+  39   2                      if(flag==0&&ifput[y+1][x+1]==0)
+  40   2                      {
+  41   3                              ifput[y+1][x+1]=1;
+  42   3                              GUI_Circle(x*22+50,y*22+10,11,Black,1);           //根据点击的位置在相应的地方绘制棋子
+  43   3                              flag=~flag;
+  44   3                      }
+  45   2                      if(flag==1&&ifput[y+1][x+1]==0)
+  46   2                      {
+  47   3                              ifput[y+1][x+1]=2;
+  48   3                              GUI_Circle(x*22+50,y*22+10,11,White,1);
+  49   3                              flag=~flag;
+  50   3                      }
+  51   2                      user=ifSomeOneWin(y+1,x+1);
+  52   2                      /*如果有某位用户赢了，就停止游戏*/
+  53   2                      if(user==1)
+  54   2                      {
+C51 COMPILER V9.00   CHESS                                                                 07/16/2015 15:30:36 PAGE 2   
+
+  55   3                              sprintf(str,"Black WIN!!");
+  56   3                              TFT_PutStr(110,100,str,Black,Red);
+  57   3                              if(JugeClose(point)==1)
+  58   3                                      return;
+  59   3                      }
+  60   2                      if(user==2)
+  61   2                      {
+  62   3                              sprintf(str,"White  WIN!!");
+  63   3                              TFT_PutStr(110,100,str,Black,Red);
+  64   3                              if(JugeClose(point)==1)
+  65   3                                      return;
+  66   3                      }
+  67   2      
+  68   2              }
+  69   1      }
+  70          
+  71          
+  72          /*判断胜利与否函数*/
+  73          uchar ifSomeOneWin(uchar x,uchar y)                     
+  74          {
+  75   1              uchar cor=ifput[x][y];
+  76   1              uchar count=0;
+  77   1              uchar i=x,j=y;
+  78   1              /*判断下降形式的斜线上是否连成五颗相同的棋子*/
+  79   1              while (ifput[i][j] == cor)
+  80   1              {
+  81   2                      count++;
+  82   2                      i -= 1;
+  83   2                      j -= 1;
+  84   2              }
+  85   1              i = x + 1, j = y + 1;
+  86   1              while (ifput[i][j] == cor)
+  87   1              {
+  88   2                      count++;
+  89   2                      i += 1;
+  90   2                      j += 1;
+  91   2              }
+  92   1              if (count >= 5)
+  93   1                      return cor;
+  94   1              /*判断直线上是否连成五颗相同的棋子*/
+  95   1              i = x, j = y;
+  96   1              count = 0;
+  97   1              while (ifput[i][j] == cor)
+  98   1              {
+  99   2                      count++;
+ 100   2                      i -= 1;
+ 101   2              }
+ 102   1              i = x + 1, j = y;
+ 103   1              while (ifput[i][j] == cor)
+ 104   1              {
+ 105   2                      count++;
+ 106   2                      i += 1;
+ 107   2              }
+ 108   1              if (count >= 5)
+ 109   1                      return cor;
+ 110   1              i = x, j = y;
+ 111   1              count = 0;
+ 112   1              while (ifput[i][j] == cor)
+ 113   1              {
+ 114   2                      count++;
+ 115   2                      j -= 1;
+ 116   2              }
+C51 COMPILER V9.00   CHESS                                                                 07/16/2015 15:30:36 PAGE 3   
+
+ 117   1              i = x, j = y + 1;
+ 118   1              while (ifput[i][j] == cor)
+ 119   1              {
+ 120   2                      count++;
+ 121   2                      j += 1;
+ 122   2              }
+ 123   1              if (count >= 5)
+ 124   1                      return cor;
+ 125   1              /*判断上升形式的斜线上是否连成五颗相同的棋子*/
+ 126   1              i = x, j = y;
+ 127   1              count = 0;
+ 128   1              while (ifput[i][j] == cor)
+ 129   1              {
+ 130   2                      count++;
+ 131   2                      i+=1;
+ 132   2                      j -= 1;
+ 133   2              }
+ 134   1              i = x-1, j = y + 1;
+ 135   1              while (ifput[i][j] == cor)
+ 136   1              {
+ 137   2                      count++;
+ 138   2                      i-=1;
+ 139   2                      j += 1;
+ 140   2              }
+ 141   1              if (count >= 5)
+ 142   1                      return cor;
+ 143   1              return 0;
+ 144   1      }        
+ 145          
+ 146          /*      绘制棋盘函数*/
+ 147          
+ 148          void DrawPlate()
+ 149          {
+ 150   1              uchar x=50,y=10;
+ 151   1              uchar i,j;
+ 152   1              for(i=0;i<11;i++)                 //初始化棋盘，给每个位置都置0
+ 153   1              {
+ 154   2                      for(j=0;j<11;j++)
+ 155   2                      {
+ 156   3                              ifput[i][j]=0;
+ 157   3                      }
+ 158   2              }
+ 159   1              for(i=1;i<11;i++)                  //绘制棋盘的格子
+ 160   1              {
+ 161   2                      for(j=1;j<11;j++)
+ 162   2                      {
+ 163   3                              GUI_Rectangle(x,y,x+22,y+22,Black,Black);
+ 164   3                              x+=22;
+ 165   3                      }
+ 166   2                      x=50;
+ 167   2                      y+=22;
+ 168   2              }
+ 169   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1149    ----
+   CONSTANT SIZE    =     25    ----
+   XDATA SIZE       =    141      14
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+C51 COMPILER V9.00   CHESS                                                                 07/16/2015 15:30:36 PAGE 4   
+
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

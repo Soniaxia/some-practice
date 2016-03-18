@@ -1,0 +1,45 @@
+C51 COMPILER V9.00   TEMPERATURE                                                           07/11/2015 11:54:56 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE TEMPERATURE
+OBJECT MODULE PLACED IN temperature.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE temperature.c LARGE BROWSE INCDIR(.\include) DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include <stdio.h>
+   2          #include <STC_12.h>
+   3          #include <tft_9325.h>
+   4          #include <tmp75.h>
+   5          
+   6          unsigned char str[20];
+   7          float temp;
+   8          
+   9          void main()
+  10          {
+  11   1              TFT_Init();
+  12   1              ClearScreen(White);
+  13   1              TMP75_Init();
+  14   1              while(1)
+  15   1              {
+  16   2                      temp=TMP75_Read()*0.0625;
+  17   2                      sprintf(str,"The temprature is :%.2f",temp);
+  18   2                      TFT_PutStr(70,110,str,Black,White);
+  19   2      
+  20   2              }
+  21   1      }
+  22          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    115    ----
+   CONSTANT SIZE    =     24    ----
+   XDATA SIZE       =     24    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

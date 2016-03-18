@@ -1,0 +1,6 @@
+"main.obj",
+"iic.obj",
+"lcd9325.obj",
+"tmp75.obj" 
+TO "tongxun" 
+RAMSIZE(256) 

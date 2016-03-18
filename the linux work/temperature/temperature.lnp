@@ -1,0 +1,7 @@
+"temperature.obj",
+"lcd9325.obj",
+"spi.obj",
+"tmp75.obj",
+"iic.obj" 
+TO "temperature" 
+RAMSIZE(256) 

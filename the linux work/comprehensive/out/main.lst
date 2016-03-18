@@ -1,0 +1,45 @@
+C51 COMPILER V9.00   MAIN                                                                  07/18/2015 17:16:27 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN ..\out\main.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c LARGE BROWSE INCDIR(..\include\drivers;..\include\app;..\include\gui
+                    -;..\net\eth;..\net\USIP) DEBUG OBJECTEXTEND PRINT(..\out\main.lst) OBJECT(..\out\main.obj)
+
+line level    source
+
+   1          #include <app.h>
+   2          #include <tft_9325.h>
+   3          #include <gui.h>
+   4          #include <rda5807.h>
+   5          void main()                                                     //函数入口
+   6          {       
+   7   1              unsigned char flag;
+   8   1              while(1)
+   9   1              {
+  10   2                      show_menu();                            //显示图标
+  11   2                      flag=menu_select();                     //选择图标
+  12   2                      if(flag==1)                                     //根据选择的图标进入功能
+  13   2                      {
+  14   3                              Temp75();
+  15   3                      }
+  16   2                      if(flag==2)
+  17   2                      {
+  18   3                              Radio();
+  19   3                      }
+  20   2              }
+  21   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     29    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----       1
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

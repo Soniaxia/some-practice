@@ -1,0 +1,55 @@
+C51 COMPILER V9.00   RDA5807                                                               07/18/2015 17:16:35 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE RDA5807
+OBJECT MODULE PLACED IN ..\out\rda5807.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\c_lib\rda5807.c LARGE BROWSE INCDIR(..\include\drivers;..\include\app;..
+                    -\include\gui;..\net\eth;..\net\USIP) DEBUG OBJECTEXTEND PRINT(..\out\rda5807.lst) OBJECT(..\out\rda5807.obj)
+
+line level    source
+
+   1          #include "rda5807.h"
+   2          #include "iic.h"
+   3          unsigned char  RDA5807_Set_Freq(unsigned int freq)
+   4          {
+   5   1              if((freq>870)&&(freq<1080))
+   6   1              {
+   7   2                      IIC_start();
+   8   2                      IIC_wr_B(0x20);
+   9   2                      IIC_wr_B(H02_H);
+  10   2                      IIC_wr_B(H02_L);
+  11   2                      IIC_wr_B(freq-870);
+  12   2                      IIC_wr_B(H03_L);
+  13   2                      IIC_wr_B(0x00);
+  14   2                      IIC_wr_B(0x40);
+  15   2                      IIC_wr_B(0x90);
+  16   2                      IIC_wr_B(0x88);
+  17   2                      IIC_stop();
+  18   2                      return 1;
+  19   2                      
+  20   2              }
+  21   1              else return 0;
+  22   1      }
+  23          void RDA5807_Init(unsigned short ini_freq)
+  24          {
+  25   1              IIC_init();
+  26   1              IIC_start();
+  27   1              IIC_wr_B(0x20);
+  28   1              IIC_wr_B(0);
+  29   1              IIC_wr_B(0x02);
+  30   1              RDA5807_Set_Freq(ini_freq);
+  31   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    130    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----       4
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

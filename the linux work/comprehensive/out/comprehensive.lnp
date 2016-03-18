@@ -1,0 +1,17 @@
+"..\out\main.obj",
+"..\out\temperature.obj",
+"..\out\radio.obj",
+"..\out\lcd9325.obj",
+"..\out\spi.obj",
+"..\out\touch.obj",
+"..\out\iic.obj",
+"..\out\tmp75.obj",
+"..\out\rda5807.obj",
+"..\out\button.obj",
+"..\out\gui.obj",
+"..\out\tmp.obj",
+"..\out\net.obj",
+"..\out\zuo.obj",
+"..\out\you.obj" 
+TO "..\out\comprehensive" 
+PRINT("..\out\comprehensive.m51") RAMSIZE(256) 

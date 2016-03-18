@@ -1,0 +1,119 @@
+C51 COMPILER V9.00   SPI                                                                   07/16/2015 19:03:07 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE SPI
+OBJECT MODULE PLACED IN spi.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE c_lib\spi.c LARGE BROWSE INCDIR(.\include) DEBUG OBJECTEXTEND PRINT(.\spi.l
+                    -st) OBJECT(spi.obj)
+
+line level    source
+
+   1          #include "..\include\spi.h"
+   2          
+   3          static u8 delay_count = 0x04;
+   4          void Delay_SD(u8 tp)
+   5          {
+   6   1              while(tp)
+   7   1              {
+   8   2                      tp--;
+   9   2              }
+  10   1      }
+  11          void Spi_IOInit()
+  12          {
+  13   1              
+  14   1      } 
+  15          void Spi_Init(void)
+  16          {
+  17   1              delay_count = INIT_SPEED;
+  18   1              Spi_IOInit();
+  19   1              SD_CLK_L;
+  20   1      }
+  21          u8 SPIx_ReadWrite7bit(u8 tp)
+  22          {
+  23   1              u8 i = 0;
+  24   1              for(;i<7;i++)
+  25   1              {
+  26   2                      if(tp&0x80)
+  27   2                      {
+  28   3                              SD_OUT_H;
+  29   3                      }
+  30   2                      else
+  31   2                      {
+  32   3                              SD_OUT_L;
+  33   3                      }
+  34   2                      Delay_SD(delay_count);
+  35   2                      SD_CLK_H;
+  36   2                      Delay_SD(delay_count);
+  37   2                      SD_CLK_L;
+  38   2                      Delay_SD(delay_count);
+  39   2                      tp = tp<<1;
+  40   2                      if(SD_IN)
+  41   2                      {
+  42   3                              tp++;   
+  43   3                      }       
+  44   2              }
+  45   1              return tp;
+  46   1      }
+  47          u8 SPIx_ReadWriteByte(u8 tp)
+  48          {
+  49   1              u8 i = 0;
+  50   1              for(;i<8;i++)
+  51   1              {
+  52   2                      if(tp&0x80)
+  53   2                      {
+  54   3                              SD_OUT_H;
+C51 COMPILER V9.00   SPI                                                                   07/16/2015 19:03:07 PAGE 2   
+
+  55   3                      }
+  56   2                      else
+  57   2                      {
+  58   3                              SD_OUT_L;
+  59   3                      }
+  60   2                      Delay_SD(delay_count);
+  61   2                      SD_CLK_H;
+  62   2                      Delay_SD(delay_count);
+  63   2                      SD_CLK_L;
+  64   2                      Delay_SD(delay_count);
+  65   2                      tp = tp<<1;
+  66   2                      if(SD_IN)
+  67   2                      {
+  68   3                              tp++;   
+  69   3                      }               
+  70   2              }
+  71   1              return tp;
+  72   1      }
+  73          void SPIx_SetSpeed(u8 SpeedSet)
+  74          {
+  75   1              switch(SpeedSet)
+  76   1              {
+  77   2                      case SPI_SPEED_2://二分频
+  78   2                              delay_count = 0;
+  79   2                              break;
+  80   2                      case SPI_SPEED_4://四分频
+  81   2                              delay_count = 1;//Fsck=Fpclk/4=18Mhz
+  82   2                              break;
+  83   2                      case SPI_SPEED_8://八分频
+  84   2                              delay_count = 2;//Fsck=Fpclk/8=9Mhz
+  85   2                              break;
+  86   2                      case SPI_SPEED_16://十六分频
+  87   2                              delay_count = 4;//Fsck=Fpclk/16=4.5Mhz
+  88   2                              break;
+  89   2                      case SPI_SPEED_256://256分频
+  90   2                              delay_count = 16;//Fsck=Fpclk/16=281.25Khz
+  91   2                              break;
+  92   2              }                         
+  93   1      } 
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    168    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      1    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

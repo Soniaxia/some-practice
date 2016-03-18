@@ -1,0 +1,267 @@
+C51 COMPILER V9.00   SOCK                                                                  07/14/2015 22:36:41 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE SOCK
+OBJECT MODULE PLACED IN ..\out\sock.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\net\USIP\sock.c LARGE BROWSE INCDIR(..\include\drivers;..\include\app;..
+                    -\include\gui;..\net\eth;..\net\USIP) DEBUG OBJECTEXTEND PRINT(..\out\sock.lst) OBJECT(..\out\sock.obj)
+
+line level    source
+
+   1          #include "sock.h"
+   2          extern UDP_INT_MSG UDP_INT;
+   3          extern TCP_INT_MSG TCP_INT;
+   4          static LPSOCKET_T SOCK_LIST[MAX_SOCK_NUM];
+   5          static u8 SOCK_BUSY = 0;
+   6          u8 Socket_Process(SOCKET_T *sock)
+   7          {
+   8   1      
+   9   1              switch (sock->TCP_TYPE&0x7f)
+  10   1              {
+  11   2                      case TCPTYPE_UDP:
+  12   2                      {
+  13   3                              if((UDP_INT.PORT==sock->LOCAL_PORT)&&(UDP_INT.RECV_SIZE>0))
+  14   3                              {
+  15   4                                      Bytes_Copy(Get_UDP_DST_IP(),(u8*)(&sock->DST_IP),4);
+  16   4                                      sock->DST_PORT = Get_UDP_DST_Port();
+  17   4                                      sock->SOCK_STATUS|=SOCK_STATUS_RECV;                    
+  18   4                              }
+  19   3                              break;
+  20   3                      }
+  21   2                      case TCPTYPE_TCP:
+  22   2                      {
+  23   3                              if((TCP_INT.MSG_TYPE)&&(TCP_INT.PORT==sock->LOCAL_PORT))
+  24   3                              {
+  25   4                                      TCP_INT.MSG_TYPE&=0x7f; 
+  26   4                                      if(TCP_INT.RECV_SIZE>0)
+  27   4                                      {
+  28   5                                              sock->SOCK_STATUS|=SOCK_STATUS_RECV;
+  29   5                                              Send_TCP_CTL(sock,TCP_FLAG_ACK,TCP_INT.RECV_SIZE);
+  30   5                                      }
+  31   4                                      if((TCP_INT.MSG_TYPE==TCP_FLAG_ACK)&&((sock->SN+1)==TCP_INT.ACK_SN))
+  32   4                                      {
+  33   5                                              sock->SN=TCP_INT.ACK_SN;
+  34   5                                              sock->SOCK_STATUS|=SOCK_STATUS_ON_CON;
+  35   5      
+  36   5                                      }
+  37   4                                      else if(TCP_INT.MSG_TYPE==TCP_FLAG_SYN)
+  38   4                                      {
+  39   5                                              if(((sock->TCP_TYPE&CONNECT_TYPE_CLT)==0)&&(sock->SOCK_STATUS&SOCK_STATUS_LISTEN)&&((sock->SOCK_STATU
+             -S&SOCK_STATUS_ON_CON)==0))
+  40   5                                              {
+  41   6                                                      Bytes_Copy(Get_TCP_DST_IP(),(u8*)(&sock->DST_IP),4);
+  42   6                                                      sock->DST_PORT = Get_TCP_DST_Port();
+  43   6                                                      Send_TCP_CTL(sock,TCP_FLAG_ACK|TCP_FLAG_SYN,1);
+  44   6                                              }
+  45   5                                      }
+  46   4                                      else if((TCP_INT.MSG_TYPE&TCP_FLAG_ACK)&&(TCP_INT.MSG_TYPE&TCP_FLAG_SYN))
+  47   4                                      {
+  48   5                                                      sock->SN=TCP_INT.ACK_SN;
+  49   5                                                      if(sock->TCP_TYPE&CONNECT_TYPE_CLT)
+  50   5                                                      {
+  51   6                                                              Send_TCP_CTL(sock,TCP_FLAG_ACK,1);
+  52   6                                                      }
+  53   5                                      }
+C51 COMPILER V9.00   SOCK                                                                  07/14/2015 22:36:41 PAGE 2   
+
+  54   4                                      else if((TCP_INT.MSG_TYPE&TCP_FLAG_ACK)&&(TCP_INT.MSG_TYPE&TCP_FLAG_FIN))
+  55   4                                      {
+  56   5                                              sock->SN=TCP_INT.ACK_SN;
+  57   5                                              Send_TCP_CTL(sock,TCP_FLAG_ACK,1);
+  58   5                                              sock->SOCK_STATUS&= ~SOCK_STATUS_ON_CON;
+  59   5                                      }
+  60   4                                      else if(TCP_INT.MSG_TYPE&TCP_FLAG_ACK)
+  61   4                                      {
+  62   5                                                      sock->SN=TCP_INT.ACK_SN;
+  63   5                                      }
+  64   4                              }
+  65   3                              TCP_INT.MSG_TYPE = 0;
+  66   3                              break;
+  67   3                      }
+  68   2                      default : 
+  69   2                      {
+  70   3                      }
+  71   2              }
+  72   1              Socket_Release_Mutex(SOCK_BUSY);
+  73   1              return sock->SOCK_STATUS;       
+  74   1      }
+  75          void Socket_Process_All(void)
+  76          {
+  77   1              u8 i;
+  78   1              if(Socket_Take_Mutex(SOCK_BUSY,1)==0)
+  79   1              {
+  80   2                      return;
+  81   2              }
+  82   1              if(MAC_Process())
+  83   1              {
+  84   2                      for(i = 0;i<MAX_SOCK_NUM;i++)
+  85   2                      {
+  86   3                                      if(SOCK_LIST[i]!=0)
+  87   3                                      Socket_Process(SOCK_LIST[i]);
+  88   3                      }
+  89   2              }
+  90   1              Socket_Release_Mutex(SOCK_BUSY);
+  91   1      }
+  92          u8 Socket_REG(SOCKET_T *sock)
+  93          {
+  94   1              u8 i;
+  95   1              for(i = 0;i<MAX_SOCK_NUM;i++)
+  96   1              {
+  97   2                      if(SOCK_LIST[i]==0)
+  98   2                      {
+  99   3                              SOCK_LIST[i]=sock;
+ 100   3                              sock->SOCK_STATUS = 0;
+ 101   3                              sock->SN = 0;
+ 102   3                              return 1;
+ 103   3                      }
+ 104   2              }
+ 105   1              return 0;
+ 106   1      }
+ 107          u8 Socket_UNREG(SOCKET_T *sock)
+ 108          {
+ 109   1              u8 i;
+ 110   1              for(i = 0;i<MAX_SOCK_NUM;i++)
+ 111   1              {
+ 112   2                      if(SOCK_LIST[i]==sock)
+ 113   2                      {
+ 114   3                              SOCK_LIST[i]=0;
+ 115   3                              return 1;
+C51 COMPILER V9.00   SOCK                                                                  07/14/2015 22:36:41 PAGE 3   
+
+ 116   3                      }
+ 117   2              }
+ 118   1              return 0;       
+ 119   1      }
+ 120          void Socket_Send_UDP(SOCKET_T* sock,u8* data_ptr,u16 data_size)
+ 121          {
+ 122   1              Socket_Take_Mutex(SOCK_BUSY,0);
+ 123   1              Send_UDP(sock->DST_IP,sock->DST_PORT,sock->LOCAL_PORT,data_ptr,data_size);
+ 124   1              Socket_Release_Mutex(SOCK_BUSY);
+ 125   1      }
+ 126          
+ 127          int Socket_Receive_UDP(SOCKET_T* sock,u8* data_ptr)
+ 128          {
+ 129   1              Socket_Take_Mutex(SOCK_BUSY,0);
+ 130   1              if((UDP_INT.PORT==sock->LOCAL_PORT))//&&(UDP_INT.RECV_SIZE>0))
+ 131   1              {
+ 132   2                      sock->SOCK_STATUS &= (~SOCK_STATUS_RECV);
+ 133   2                      Socket_Release_Mutex(SOCK_BUSY);
+ 134   2                      return Get_UDP_DATA(data_ptr);
+ 135   2              }
+ 136   1              else 
+ 137   1              {
+ 138   2                      sock->SOCK_STATUS &= (~SOCK_STATUS_RECV);
+ 139   2                      Socket_Release_Mutex(SOCK_BUSY);
+ 140   2                      return -1;
+ 141   2              }
+ 142   1      }
+ 143          void Socket_Listen(SOCKET_T* sock)
+ 144          {
+ 145   1              sock->SOCK_STATUS|=SOCK_STATUS_LISTEN;
+ 146   1      }
+ 147          void Socket_Stop_Listen(SOCKET_T* sock)
+ 148          {
+ 149   1              sock->SOCK_STATUS&=(~SOCK_STATUS_LISTEN);
+ 150   1      }
+ 151          void Socket_Connect(SOCKET_T* sock)
+ 152          {
+ 153   1              Socket_Take_Mutex(SOCK_BUSY,0);
+ 154   1              Send_TCP_CTL(sock,TCP_FLAG_SYN,0);
+ 155   1              Socket_Release_Mutex(SOCK_BUSY);
+ 156   1      }
+ 157          void Socket_Finish(SOCKET_T* sock)
+ 158          {
+ 159   1                      Socket_Take_Mutex(SOCK_BUSY,0);
+ 160   1                      Send_TCP_CTL(sock,TCP_FLAG_ACK|TCP_FLAG_FIN,0);
+ 161   1                      Socket_Release_Mutex(SOCK_BUSY);
+ 162   1      }
+ 163          void Socket_Send_TCP(SOCKET_T* sock,u8* data_ptr,u16 data_size)
+ 164          {
+ 165   1              Socket_Take_Mutex(SOCK_BUSY,0);
+ 166   1              Fill_TCP(sock->DST_IP,sock->LOCAL_PORT,sock->DST_PORT,sock->SN,TCP_INT.SN+1,TCP_FLAG_PSH|TCP_FLAG_ACK,dat
+             -a_size,data_ptr);
+ 167   1              Send_MAC(sock->DST_IP,TCPTYPE_TCP,(u8*)TX_TCP_BUF,(TX_TCP_BUF->HEAD_SIZE>>4)*4+data_size);      
+ 168   1              Socket_Release_Mutex(SOCK_BUSY);
+ 169   1      }
+ 170          int Socket_Receive_TCP(SOCKET_T* sock,u8* data_ptr) 
+ 171          {
+ 172   1              Socket_Take_Mutex(SOCK_BUSY,0);
+ 173   1              if((TCP_INT.PORT==sock->LOCAL_PORT))//&&(TCP_INT.RECV_SIZE))
+ 174   1              {
+ 175   2                      sock->SOCK_STATUS &= (~SOCK_STATUS_RECV);
+ 176   2                      Socket_Release_Mutex(SOCK_BUSY);
+C51 COMPILER V9.00   SOCK                                                                  07/14/2015 22:36:41 PAGE 4   
+
+ 177   2                      return Get_TCP_Data(data_ptr);
+ 178   2              }
+ 179   1              else 
+ 180   1              {
+ 181   2                      sock->SOCK_STATUS &= (~SOCK_STATUS_RECV);
+ 182   2                      Socket_Release_Mutex(SOCK_BUSY);
+ 183   2                      return -1;
+ 184   2              }
+ 185   1      }
+ 186          void Socket_Layer_Init(void)
+ 187          {
+ 188   1              u8 i;
+ 189   1              for(i = 0;i<MAX_SOCK_NUM;i++)
+ 190   1              {
+ 191   2                      SOCK_LIST[i]=0; 
+ 192   2              }       
+ 193   1      }
+ 194          u8 Socket_Take_Mutex(u8 mutex,u8 time_out)
+ 195          {
+ 196   1              if(time_out==0)
+ 197   1              {
+ 198   2                      while(1)
+ 199   2                      {
+ 200   3                              if(mutex)
+ 201   3                              {
+ 202   4                                      //os_delay(1);
+ 203   4                              }
+ 204   3                              else 
+ 205   3                              {
+ 206   4                                      mutex = 1;
+ 207   4                                      return 1;
+ 208   4                              }
+ 209   3                      }
+ 210   2              }
+ 211   1              else
+ 212   1              {
+ 213   2                      while(time_out)
+ 214   2                      {
+ 215   3                              if(mutex)
+ 216   3                              {
+ 217   4                                      time_out--;
+ 218   4                                      //os_delay(1);
+ 219   4                              }
+ 220   3                              else 
+ 221   3                              {
+ 222   4                                      mutex = 1;
+ 223   4                                      return 1;
+ 224   4                              }
+ 225   3                      }
+ 226   2              }
+ 227   1              
+ 228   1              return 0;
+ 229   1      }
+ 230          void Socket_Release_Mutex(u8 mutex)
+ 231          {
+ 232   1                      mutex = 0;
+ 233   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1724    ----
+   CONSTANT SIZE    =   ----    ----
+C51 COMPILER V9.00   SOCK                                                                  07/14/2015 22:36:41 PAGE 5   
+
+   XDATA SIZE       =     13      44
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

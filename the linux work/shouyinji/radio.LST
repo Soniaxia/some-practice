@@ -1,0 +1,85 @@
+C51 COMPILER V9.00   RADIO                                                                 07/16/2015 15:14:15 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE RADIO
+OBJECT MODULE PLACED IN radio.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE radio.c LARGE BROWSE INCDIR(.\include) DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include <STC_12.h>
+   2          #include "tft_9325.h"
+   3          #include <stdio.h>
+   4          #include "rda5807.h"
+   5          #include "touch.h"
+   6          
+   7          void Delay()
+   8          {
+   9   1              unsigned int i,j;
+  10   1              for(i=0;i<500;i++)
+  11   1                      for(j=0;j<200;j++);
+  12   1      }
+  13          
+  14          void main(void)
+  15          {
+  16   1              unsigned int freq=914;
+  17   1              unsigned int point[2];
+  18   1              char str[20];
+  19   1              TFT_Init();
+  20   1              ClearScreen(White);
+  21   1              GUI_Square(260,50,30,Black,0);
+  22   1              GUI_Line(263,65,287,65,Black);
+  23   1              GUI_Line(275,53,275,77,Black);
+  24   1      
+  25   1              GUI_Square(260,100,30,Black,0);
+  26   1              GUI_Line(263,115,287,115,Black);
+  27   1      
+  28   1              RDA5807_Init(914);
+  29   1              sprintf(str,"%2.1fMHz",freq/10.0);
+  30   1              TFT_PutStr(130,120,str,Black,White);
+  31   1              while(1)
+  32   1              {               
+  33   2                      T_GetPoint(point);
+  34   2                      if(point[0]>260&&point[0]<290&&point[1]>50&&point[1]<80)
+  35   2                      {
+  36   3                              if(freq>870)
+  37   3                              freq=freq+1;
+  38   3                              Delay();
+  39   3                              RDA5807_Set_Freq(freq);
+  40   3                              sprintf(str,"%2.1fMHz",freq/10.0);
+  41   3                              TFT_PutStr(130,120,str,Black,White);
+  42   3                      }
+  43   2                      if(point[0]>260&&point[0]<290&&point[1]>100&&point[1]<130)
+  44   2                      {
+  45   3                              if(freq<1070)
+  46   3                              freq=freq-1;
+  47   3                              Delay();
+  48   3                              RDA5807_Set_Freq(freq);
+  49   3                              sprintf(str,"%2.1fMHz",freq/10.0);
+  50   3                              TFT_PutStr(130,120,str,Black,White);
+  51   3                              
+  52   3                      }
+  53   2                      
+  54   2      
+  55   2              /*      if(Judge_Button(b1,point))
+C51 COMPILER V9.00   RADIO                                                                 07/16/2015 15:14:15 PAGE 2   
+
+  56   2                      {break;}                */
+  57   2                      
+  58   2              }
+  59   1              
+  60   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    631    ----
+   CONSTANT SIZE    =      9    ----
+   XDATA SIZE       =   ----      26
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

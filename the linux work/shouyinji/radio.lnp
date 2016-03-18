@@ -1,0 +1,7 @@
+"radio.obj",
+"rda5807.obj",
+"lcd9325.obj",
+"touch.obj",
+"iic.obj" 
+TO "radio" 
+RAMSIZE(256) 

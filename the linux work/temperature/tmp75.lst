@@ -1,0 +1,75 @@
+C51 COMPILER V9.00   TMP75                                                                 07/11/2015 11:54:56 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE TMP75
+OBJECT MODULE PLACED IN tmp75.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE c_lib\tmp75.c LARGE BROWSE INCDIR(.\include) DEBUG OBJECTEXTEND PRINT(.\tmp
+                    -75.lst) OBJECT(tmp75.obj)
+
+line level    source
+
+   1          #include "../include/iic.h"
+   2          #include <STC_12.h>
+   3          u8 TMP75_address = 0x90;
+   4          #define   TMP75_cmd_TR         0x00//Temperature Register (READ Only)    
+   5          #define   TMP75_cmd_CONFIG     0x01//Configuration Register (READ/WRITE) default set to a count = 0x60
+   6          #define   TMP75_cmd_TL         0x02//T(low) Register (READ/WRITE)
+   7          #define   TMP75_cmd_TH         0x03//T(high) Register (READ/WRITE)
+   8          
+   9          void IIC_Delay(u8 tenus)
+  10          {
+  11   1              u8 i,j;
+  12   1              for(i=0;i<20;i++)
+  13   1              for(j=0;j<tenus;j++);
+  14   1      }
+  15          void Write_TMP75(u8 cmd_r,u8 dat)
+  16          {
+  17   1              IIC_start();
+  18   1              IIC_wr_B(TMP75_address);
+  19   1              IIC_wr_B(cmd_r);
+  20   1              IIC_wr_B(dat>>8);
+  21   1              IIC_wr_B(dat);
+  22   1              IIC_stop();
+  23   1      }
+  24          u32 TMP75_Init(void)
+  25          {
+  26   1              IIC_init();
+  27   1              IIC_start();
+  28   1              IIC_wr_B(TMP75_address);
+  29   1              IIC_wr_B(TMP75_cmd_CONFIG);
+  30   1              IIC_wr_B(0x6a);
+  31   1              IIC_stop();
+  32   1              return 0;
+  33   1      }
+  34          u16 TMP75_Read(void)
+  35          {
+  36   1              u16 t;
+  37   1              IIC_start();
+  38   1              IIC_wr_B(TMP75_address);
+  39   1              IIC_wr_B(TMP75_cmd_TR);
+  40   1              IIC_start();
+  41   1              IIC_wr_B(TMP75_address+1);
+  42   1              t = IIC_re_B();
+  43   1              t = t<<8;
+  44   1              IIC_Delay(100);
+  45   1              t = t+IIC_re_B();
+  46   1              IIC_stop();
+  47   1              t = t>>4;
+  48   1              return t;
+  49   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    197    ----
+   CONSTANT SIZE    =   ----    ----
+C51 COMPILER V9.00   TMP75                                                                 07/11/2015 11:54:56 PAGE 2   
+
+   XDATA SIZE       =      1       4
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

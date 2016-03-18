@@ -1,0 +1,199 @@
+C51 COMPILER V9.00   TOUCH                                                                 07/18/2015 17:16:32 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE TOUCH
+OBJECT MODULE PLACED IN ..\out\touch.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\c_lib\touch.c LARGE BROWSE INCDIR(..\include\drivers;..\include\app;..\i
+                    -nclude\gui;..\net\eth;..\net\USIP) DEBUG OBJECTEXTEND PRINT(..\out\touch.lst) OBJECT(..\out\touch.obj)
+
+line level    source
+
+   1          
+   2          #include "touch.h"
+   3          
+   4          #ifdef MCU_51
+   5                  #include <STC_12.h>
+   6          
+   7                  sbit TCS = P5^2;
+   8                  sbit TCK = P1^7;
+   9                  sbit TIN = P1^6;
+  10                  sbit TOUT = P1^5;
+  11          #endif
+  12          static void Delay()
+  13          {
+  14   1              u16 i;
+  15   1        for(i = 15;i>1;i--);
+  16   1      }
+  17          u16 Re_y(void)
+  18          {
+  19   1        unsigned char i,t1 = 0x93;
+  20   1        u16 t2;
+  21   1        TCK_L;
+  22   1        TCS_L;
+  23   1        for(i = 0;i<8;i++)
+  24   1        {
+  25   2          
+  26   2          if((t1&0x80)==0x80)  
+  27   2            TOUT_H;
+  28   2          else
+  29   2            TOUT_L;
+  30   2          TCK_H;
+  31   2              Delay();
+  32   2          TCK_L;
+  33   2         
+  34   2          t1 = t1<<1;
+  35   2        }
+  36   1        Delay();
+  37   1        t2 = 0;
+  38   1        for(i = 0;i<12;i++)
+  39   1        {
+  40   2          t2 = t2<<1;
+  41   2          TCK_H; 
+  42   2          Delay();
+  43   2          TCK_L;
+  44   2          Delay();
+  45   2          if(TIN==1)
+  46   2            t2 = t2|0x01;
+  47   2        }
+  48   1        for(i = 0;i<4;i++)
+  49   1        {
+  50   2       
+  51   2          TCK_H; 
+  52   2          Delay();
+  53   2          TCK_L;
+  54   2        }
+C51 COMPILER V9.00   TOUCH                                                                 07/18/2015 17:16:32 PAGE 2   
+
+  55   1        TCS_H;
+  56   1        return t2;
+  57   1      }
+  58          u16 Re_x(void)
+  59          {
+  60   1        unsigned char i,t1 = 0xd3;
+  61   1       u16 t2;
+  62   1        TCK_L;
+  63   1        TCS_L;
+  64   1        for(i = 0;i<8;i++)
+  65   1        {
+  66   2          
+  67   2          if((t1&0x80)==0x80)
+  68   2            TOUT_H;
+  69   2          else
+  70   2            TOUT_L;
+  71   2          TCK_H;
+  72   2              Delay();
+  73   2          TCK_L;
+  74   2         
+  75   2          t1 = t1<<1;
+  76   2        }
+  77   1        Delay();
+  78   1        t2 = 0;
+  79   1        for(i = 0;i<12;i++)
+  80   1        {
+  81   2          t2 = t2<<1;
+  82   2          TCK_H; 
+  83   2          Delay();
+  84   2          TCK_L;
+  85   2          Delay();
+  86   2          if(TIN==1)
+  87   2            t2 = t2|0x01;
+  88   2        }
+  89   1        for(i = 0;i<4;i++)
+  90   1        {
+  91   2       
+  92   2          TCK_H; 
+  93   2          Delay();
+  94   2          TCK_L;
+  95   2        }
+  96   1        TCS_H;
+  97   1        return t2;
+  98   1      }
+  99          u16 Re_z1()
+ 100          {
+ 101   1        unsigned char i,t1 = 0xb3;
+ 102   1      u16 t2;
+ 103   1        TCK_L;
+ 104   1        TCS_L;
+ 105   1        for(i = 0;i<8;i++)
+ 106   1        {
+ 107   2          
+ 108   2          if((t1&0x80)==0x80)
+ 109   2            TOUT_H;
+ 110   2          else
+ 111   2            TOUT_L;
+ 112   2          TCK_H;
+ 113   2              Delay();
+ 114   2          TCK_L;
+ 115   2         
+ 116   2          t1 = t1<<1;
+C51 COMPILER V9.00   TOUCH                                                                 07/18/2015 17:16:32 PAGE 3   
+
+ 117   2        }
+ 118   1        Delay();
+ 119   1        t2 = 0;
+ 120   1        for(i = 0;i<12;i++)
+ 121   1        {
+ 122   2          t2 = t2<<1;
+ 123   2          TCK_H; 
+ 124   2          Delay();
+ 125   2          TCK_L;
+ 126   2          Delay();
+ 127   2          if(TIN==1)
+ 128   2            t2 = t2|0x01;
+ 129   2        }
+ 130   1        for(i = 0;i<4;i++)
+ 131   1        {
+ 132   2       
+ 133   2          TCK_H; 
+ 134   2          Delay();
+ 135   2          TCK_L;
+ 136   2        }
+ 137   1        TCS_H;
+ 138   1        return t2;
+ 139   1      }
+ 140          void T_GetPoint(u16 point_t[2])
+ 141          {
+ 142   1              u32 x = 0,y = 0,tx,ty;
+ 143   1          u8 i = 0;
+ 144   1          for(;i<6;i++)
+ 145   1          {
+ 146   2               if(Re_z1()>100)
+ 147   2               {
+ 148   3                ty = ((Re_x()*4)/59);
+ 149   3                tx = ((Re_y()*4)/44);
+ 150   3                if(Re_z1()>30)
+ 151   3                {
+ 152   4                  x = x+tx;
+ 153   4                  y = y+ty;
+ 154   4                }
+ 155   3                else 
+ 156   3                {
+ 157   4                  break;
+ 158   4                }
+ 159   3               }
+ 160   2               else
+ 161   2               {
+ 162   3                              point_t[0] = 0;
+ 163   3                              point_t[1] = 0;
+ 164   3                 return;
+ 165   3               }
+ 166   2          }
+ 167   1         point_t[0] = (u16)(x/(i))-13;
+ 168   1        point_t[1] = 260 - (u16)(y/(i));
+ 169   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    636    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----      20
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+C51 COMPILER V9.00   TOUCH                                                                 07/18/2015 17:16:32 PAGE 4   
+
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

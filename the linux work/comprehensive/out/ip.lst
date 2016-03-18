@@ -1,0 +1,326 @@
+C51 COMPILER V9.00   IP                                                                    07/14/2015 22:36:40 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE IP
+OBJECT MODULE PLACED IN ..\out\ip.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\net\USIP\ip.c LARGE BROWSE INCDIR(..\include\drivers;..\include\app;..\i
+                    -nclude\gui;..\net\eth;..\net\USIP) DEBUG OBJECTEXTEND PRINT(..\out\ip.lst) OBJECT(..\out\ip.obj)
+
+line level    source
+
+   1          #include "ip.h"
+   2          #include "tcp.h"
+   3          #include "udp.h"
+   4          /**********arp 映射表*******************/
+   5          static u8 MAC_WITH_IP[ARP_BUF_SIZE/11][11];
+   6                  
+   7          /***************本地IP*********************/
+   8          u8 Local_IP[4] = LOCAL_IP_ADDR;
+   9          
+  10          //+20用于添加udp伪首部
+  11          static u8 buf1[MAX_IP_LEN+66];
+  12          static u8 buf2[MAX_IP_LEN+66];
+  13          MAC_BUF *TX_MAC_BUF;
+  14          MAC_BUF *RX_MAC_BUF;
+  15          IP_BUF *TX_IP_BUF;  
+  16          IP_BUF *RX_IP_BUF;
+  17          u8 IP_INT_TYPE;
+  18          u16 MAC_INT_TYPE;
+  19          
+  20          /****************************************************************
+  21          函数名称：Bytes_Copy
+  22          函数功能：拷贝S1的Num个字节到S2
+  23          *****************************************************************/
+  24          void Bytes_Copy(u8* From_S1,u8* TO_S2,u16 Num)
+  25          {
+  26   1              while(Num)
+  27   1              {
+  28   2                      TO_S2[Num-1] = From_S1[Num-1];
+  29   2                      Num--;  
+  30   2              }
+  31   1      }
+  32          u8 Bytes_Compare(u8* From_S1,u8* TO_S2,u16 Num)
+  33          {
+  34   1              u8 p = 1;
+  35   1              while(Num)
+  36   1              {
+  37   2                      if(TO_S2[Num-1] != From_S1[Num-1])
+  38   2                              p = 0;
+  39   2                      Num--;  
+  40   2              }
+  41   1              return p;
+  42   1      }
+  43          u16 Word_CONV(u16 arg)
+  44          {
+  45   1              //return (u16)((arg<<8)+(arg>>8));
+  46   1              //大端格式不用转换
+  47   1              return arg;
+  48   1      }
+  49          u16 Calculate_SUM(u16 *ptr,u16 len,u8 sum_skewing)
+  50          {
+  51   1                      u16 i;
+  52   1          u32 sum = 0;
+  53   1          u16 sum_t = 0;
+  54   1          ptr[sum_skewing] = 0;
+C51 COMPILER V9.00   IP                                                                    07/14/2015 22:36:40 PAGE 2   
+
+  55   1       
+  56   1          for(i = 0;i<len;i++)
+  57   1          {
+  58   2           sum = ptr[i]+sum;
+  59   2          }
+  60   1                      sum_t = sum&0x0000ffff;
+  61   1                      sum = sum>>16;
+  62   1          sum_t = sum+sum_t;
+  63   1          sum_t = (~sum_t);   
+  64   1          ptr[sum_skewing] = sum_t;
+  65   1          return sum_t;               
+  66   1      }
+  67          
+  68          void Fill_MAC(u8* to_mac,u8* local_mac,u16 type)
+  69          {
+  70   1          Bytes_Copy(to_mac,TX_MAC_BUF->TO_MAC,6);
+  71   1          Bytes_Copy(local_mac,TX_MAC_BUF->LOCAL_MAC,6);
+  72   1          TX_MAC_BUF->IP_TYPE= Word_CONV(type);
+  73   1      }
+  74          
+  75          
+  76          
+  77          void Fill_IPADDR(u8* local_ip,u8* to_ip)
+  78          {
+  79   1          Bytes_Copy(local_ip,TX_IP_BUF->LOCAL_IP,4);
+  80   1          Bytes_Copy(to_ip,TX_IP_BUF->TO_IP,4);
+  81   1      }
+  82          
+  83          void Fill_IP_SIZE(u8 head_size,u16 all_size)
+  84          {
+  85   1          TX_IP_BUF->VER_HEAD_SIZE = 0x40+head_size;
+  86   1          TX_IP_BUF->ALL_SIZE = Word_CONV(all_size);
+  87   1              TX_IP_BUF->TOS = 0;
+  88   1      }
+  89          
+  90          void Fill_Skewing(u8 flag,u16 skewing)
+  91          {
+  92   1                TX_IP_BUF->FLAG_SKEWING = (skewing&0x1f00)+(skewing&0xff);
+  93   1          TX_IP_BUF->FLAG_SKEWING |= flag>>3;
+  94   1              /*
+  95   1          TX_IP_BUF->FLAG_SKEWING = ((skewing&0x1f00)>>8)+(skewing<<8);
+  96   1          TX_IP_BUF->FLAG_SKEWING |= ((flag<<5)&0x00c0);
+  97   1              */
+  98   1      }
+  99          void Fill_TTL(u8 ttl,u8 tcp_type)
+ 100          {
+ 101   1        TX_IP_BUF->TIME_OUT = ttl;
+ 102   1        TX_IP_BUF->TCP_TYPE = tcp_type;
+ 103   1      }
+ 104          u16 Fill_IP_SUM(void)
+ 105          {
+ 106   1          return Calculate_SUM((u16*)TX_IP_BUF,10,5);
+ 107   1      }
+ 108          u8 Check_IP_SUM(void)
+ 109          {
+ 110   1        u8 i;
+ 111   1        u32 sum = 0;
+ 112   1       
+ 113   1          for(i = 0;i<10;i++)
+ 114   1          {
+ 115   2           sum = ((u16*)RX_IP_BUF)[i]+sum;
+ 116   2          }
+C51 COMPILER V9.00   IP                                                                    07/14/2015 22:36:40 PAGE 3   
+
+ 117   1          sum = (sum>>16)+(sum&0x0000ffff);
+ 118   1          if(((~sum)&0xff7f)==0)
+ 119   1            return 1;
+ 120   1          else
+ 121   1            return 0;
+ 122   1      }
+ 123          void USIP_Init(void)
+ 124          {
+ 125   1              TX_MAC_BUF = (MAC_BUF*)buf1;
+ 126   1              RX_MAC_BUF = (MAC_BUF*)buf2;
+ 127   1              TX_IP_BUF = ((IP_BUF*)(buf1+14));
+ 128   1              RX_IP_BUF = ((IP_BUF*)(buf2+14));
+ 129   1              UDP_Init();
+ 130   1              TCP_Init(); 
+ 131   1      }
+ 132          void Send_MAC(u8* to_ip,u8 tcp_type,u8* tcp_ptr,u16 len)
+ 133          {
+ 134   1        TX_IP_BUF->SIGN++;
+ 135   1        Fill_MAC(ARP_Find_MAC(to_ip),LOCAL_MAC,IPTYPE_IP); 
+ 136   1        Fill_IPADDR(Local_IP,to_ip);
+ 137   1        Fill_IP_SIZE(5,len+20); 
+ 138   1        Fill_TTL(25,tcp_type);
+ 139   1        Fill_Skewing(0x00,0);
+ 140   1        Fill_IP_SUM();
+ 141   1        Bytes_Copy(tcp_ptr,(u8*)TX_MAC_BUF+34,len);
+ 142   1        enc28j60PacketSend(len+34,(u8*)TX_MAC_BUF);
+ 143   1      }
+ 144                  
+ 145          u8* ARP_Find_MAC(u8* ip)
+ 146          {
+ 147   1              u8 i;
+ 148   1              static u8 ARP_MAC[] = {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x08,0x06,0x00,0x01,0x
+             -08,0x00,0x06,0x04};
+ 149   1              for(i = 0;i<(ARP_BUF_SIZE/11);i++)
+ 150   1              {
+ 151   2                      if(Bytes_Compare(ip,MAC_WITH_IP[i],4))
+ 152   2                      {
+ 153   3                              MAC_WITH_IP[i][10] = 0;
+ 154   3                              return MAC_WITH_IP[i]+4;
+ 155   3                      }       
+ 156   2              }
+ 157   1              Bytes_Copy(ARP_MAC,TX_MAC_BUF->TO_MAC,20); 
+ 158   1              Bytes_Copy(ip,(u8*)TX_MAC_BUF+38,4); 
+ 159   1      
+ 160   1      
+ 161   1              Bytes_Copy(LOCAL_MAC,TX_MAC_BUF->LOCAL_MAC,6); 
+ 162   1              Bytes_Copy(LOCAL_MAC,(u8*)TX_MAC_BUF+22,6);
+ 163   1              Bytes_Copy(Local_IP,(u8*)TX_MAC_BUF+28,4);
+ 164   1              *((u8*)TX_MAC_BUF+20) = 0;
+ 165   1              *((u8*)TX_MAC_BUF+21) = 1;
+ 166   1              enc28j60PacketSend(42,(u8*)TX_MAC_BUF);
+ 167   1              return ARP_MAC;
+ 168   1      }
+ 169          void ARP_Process(void)                  //arp处理函数
+ 170          {
+ 171   1              u8 max = 0,i;
+ 172   1              if(((u8*)RX_MAC_BUF)[21]==1)      //如果为arp请求
+ 173   1              {
+ 174   2                      if(Bytes_Compare(Local_IP,(u8*)RX_MAC_BUF+38,4))
+ 175   2                      {
+ 176   3                              Bytes_Copy(RX_MAC_BUF->TO_MAC,TX_MAC_BUF->TO_MAC,20);//从接收帧拷贝前20字节到发送帧     
+ 177   3                              Bytes_Copy(RX_MAC_BUF->LOCAL_MAC,TX_MAC_BUF->TO_MAC,6); //填写目的地址
+C51 COMPILER V9.00   IP                                                                    07/14/2015 22:36:40 PAGE 4   
+
+ 178   3                              Bytes_Copy(RX_MAC_BUF->LOCAL_MAC,(u8*)TX_MAC_BUF+32,6);
+ 179   3                              Bytes_Copy((u8*)RX_MAC_BUF+28,(u8*)TX_MAC_BUF+38,4);
+ 180   3              
+ 181   3                              Bytes_Copy(LOCAL_MAC,TX_MAC_BUF->LOCAL_MAC,6); 
+ 182   3                              Bytes_Copy(LOCAL_MAC,(u8*)TX_MAC_BUF+22,6);
+ 183   3                              Bytes_Copy(Local_IP,(u8*)TX_MAC_BUF+28,4);
+ 184   3              
+ 185   3                              *((u8*)TX_MAC_BUF+20) = 0;
+ 186   3                              *((u8*)TX_MAC_BUF+21) = 2;
+ 187   3                              enc28j60PacketSend(42,(u8*)TX_MAC_BUF);
+ 188   3                      }
+ 189   2              }
+ 190   1              if(((u8*)RX_MAC_BUF)[21]==2)      //如果为arp应答
+ 191   1              {
+ 192   2                      for(i = 0;i<(ARP_BUF_SIZE/11);i++)
+ 193   2                      {
+ 194   3                              if(MAC_WITH_IP[max][10]>MAC_WITH_IP[i][10])
+ 195   3                              {
+ 196   4                                      max = i;                        
+ 197   4                              }
+ 198   3                      }
+ 199   2                      MAC_WITH_IP[max][10] = 0;
+ 200   2                      Bytes_Copy(RX_MAC_BUF->LOCAL_MAC,MAC_WITH_IP[max]+4,6);
+ 201   2                      Bytes_Copy((u8*)RX_MAC_BUF+28,MAC_WITH_IP[max],4);
+ 202   2                      for(i = 0;i<(ARP_BUF_SIZE/11);i++)
+ 203   2                      {
+ 204   3                              if(MAC_WITH_IP[i][10]<250)
+ 205   3                              {
+ 206   4                                      MAC_WITH_IP[i][10]++;
+ 207   4                              }
+ 208   3                      }       
+ 209   2              }
+ 210   1              MAC_INT_TYPE = 0x00;            
+ 211   1      }
+ 212          void ICMP_Process(void)
+ 213          {
+ 214   1              u8* to_ip = RX_IP_BUF->LOCAL_IP;
+ 215   1              if(RX_IP_BUF->IP_DATA[0]==ICMPTYPE_PING)
+ 216   1              {
+ 217   2      
+ 218   2                      Bytes_Copy((u8*)RX_IP_BUF,(u8*)TX_IP_BUF,RX_IP_BUF->ALL_SIZE);
+ 219   2          Fill_MAC(ARP_Find_MAC(to_ip),LOCAL_MAC,IPTYPE_IP); 
+ 220   2                Fill_IPADDR(Local_IP,to_ip);
+ 221   2                      TX_IP_BUF->IP_DATA[0] = 0;
+ 222   2                      TX_IP_BUF->IP_DATA[RX_IP_BUF->ALL_SIZE-20] = 0;//ALL_SIZE：端格式区别
+ 223   2                      Calculate_SUM((u16*)(TX_IP_BUF->IP_DATA),20,1);
+ 224   2                      Packet_Send((RX_IP_BUF->ALL_SIZE+14),(u8*)TX_MAC_BUF);
+ 225   2                      
+ 226   2              }
+ 227   1              IP_INT_TYPE = 0x00;     
+ 228   1      }
+ 229          u8 IP_Process(void)
+ 230          {
+ 231   1              if(Check_IP_SUM())
+ 232   1              {
+ 233   2                      if(RX_IP_BUF->TCP_TYPE==TCPTYPE_ICMP)
+ 234   2                      {
+ 235   3                              IP_INT_TYPE = IP_INT_ICMP;
+ 236   3                              ICMP_Process();
+ 237   3                              return IP_INT_ICMP;
+ 238   3                      }       
+ 239   2                      if(RX_IP_BUF->TCP_TYPE==TCPTYPE_UDP)
+C51 COMPILER V9.00   IP                                                                    07/14/2015 22:36:40 PAGE 5   
+
+ 240   2                      {
+ 241   3                              IP_INT_TYPE = IP_INT_UDP;
+ 242   3                              UDP_Process();
+ 243   3                              return IP_INT_UDP;              
+ 244   3                      }
+ 245   2                      if(RX_IP_BUF->TCP_TYPE==TCPTYPE_TCP)
+ 246   2                      {
+ 247   3                              IP_INT_TYPE = IP_INT_TCP;
+ 248   3                              TCP_Process();
+ 249   3                        return IP_INT_TCP;
+ 250   3                      }
+ 251   2                      IP_INT_TYPE = UNDEF_INT;
+ 252   2      
+ 253   2                      MAC_INT_TYPE = 0x00;
+ 254   2                      return UNDEF_INT;
+ 255   2              }
+ 256   1              else
+ 257   1              {
+ 258   2                      IP_INT_TYPE = 0x00;
+ 259   2      
+ 260   2                      MAC_INT_TYPE = 0x00;
+ 261   2                      return 0x00;
+ 262   2              }
+ 263   1      }
+ 264          u16 MAC_Process(void)
+ 265          {
+ 266   1              u16 rev = 0;
+ 267   1              rev = Packet_Receive(MAX_IP_LEN+56,(u8*)RX_MAC_BUF);
+ 268   1              if(rev)
+ 269   1              {
+ 270   2                      if(RX_MAC_BUF->IP_TYPE==IPTYPE_ARP)//arp
+ 271   2                      {
+ 272   3                              MAC_INT_TYPE = MAC_INT_ARP;
+ 273   3                              ARP_Process();
+ 274   3                              return MAC_INT_ARP;     
+ 275   3                      }
+ 276   2                      if(RX_MAC_BUF->IP_TYPE==IPTYPE_IP)//ip
+ 277   2                      {               
+ 278   3                              
+ 279   3                              MAC_INT_TYPE = MAC_INT_IP;
+ 280   3                              IP_Process();
+ 281   3                              return MAC_INT_IP;              
+ 282   3                      }
+ 283   2                      MAC_INT_TYPE = UNDEF_INT;
+ 284   2                      return UNDEF_INT;                               
+ 285   2              }
+ 286   1              else
+ 287   1              {
+ 288   2                      MAC_INT_TYPE = 0x00;
+ 289   2                      return 0x00;
+ 290   2              }
+ 291   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2823    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =    449      68
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+C51 COMPILER V9.00   IP                                                                    07/14/2015 22:36:40 PAGE 6   
+
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

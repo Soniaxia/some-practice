@@ -1,0 +1,5 @@
+"interrupt.obj",
+"spi.obj",
+"lcd9325.obj" 
+TO "interrupt" 
+RAMSIZE(256) 

@@ -1,0 +1,105 @@
+C51 COMPILER V9.00   INTERNET                                                              07/14/2015 22:37:13 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE INTERNET
+OBJECT MODULE PLACED IN ..\out\internet.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\app\internet.c LARGE BROWSE INCDIR(..\include\drivers;..\include\app;..\
+                    -include\gui;..\net\eth;..\net\USIP) DEBUG OBJECTEXTEND PRINT(..\out\internet.lst) OBJECT(..\out\internet.obj)
+
+line level    source
+
+   1          /*
+   2          *                                        internet.c
+   3          *       功能:           TCP服务器(远程温度监控)应用实现
+   4          *       @作者:  倪杰 黄婷
+   5          */
+   6          #include <STC_12.h>
+   7          #include "tft_9325.h"
+   8          #include "enc28j60.h"
+   9          #include "ip.h"
+  10          #include "tcp.h"
+  11          #include "udp.h"
+  12          #include "sock.h"
+  13          #include "app.h"
+  14          #include <gui.h>
+  15          void    SPI1_Init(void);
+  16          /*
+  17          *       功能:           远程温度监控程序入口
+  18          *       参数:           无
+  19          *       返回值：无
+  20          *       @
+  21          */
+  22          int internet(void)
+  23          {
+  24   1              unsigned char str[64];
+  25   1              unsigned char sndbuf[30];
+  26   1              unsigned int recv_len;
+  27   1              unsigned int point[2];
+  28   1              float temp;                                                     //温度
+  29   1              SOCKET_T sock1;
+  30   1              SPI1_Init();
+  31   1              TFT_Init();
+  32   1              if(enc28j60Init(LOCAL_MAC))
+  33   1                      TFT_PutStr(0,30,"Ethernet init success!",0xffff,0);
+  34   1              else
+  35   1              {
+  36   2                      TFT_PutStr(0,30,"Ethernet init failed!",0xffff,0);
+  37   2                      TFT_PutStr(0,46,"The local IP is 192.168.1.23",0xffff,0);
+  38   2              }
+  39   1              TFT_PutStr(0,46,"The local IP is 192.168.1.23",0xffff,0);
+  40   1              USIP_Init();
+  41   1      
+  42   1        
+  43   1              sock1.TCP_TYPE = TCPTYPE_TCP|CONNECT_TYPE_SERV;         //第一个端口为TCP服务器端口
+  44   1              sock1.LOCAL_PORT = 80;                                                                                                          //端口号80      
+  45   1              
+  46   1              //打开端口
+  47   1              Socket_Open(&sock1);
+  48   1              TFT_PutStr(0,62,"The TCP port is 80",0xffff,0);
+  49   1              Socket_Listen(&sock1);                                                                                                  //监听端口1
+  50   1              
+  51   1              GUI_Rectangle(0,0,320,240,Black,1);
+  52   1              DrawClose();                                                                                                                                            //绘制关闭按钮
+  53   1              while(1)
+  54   1              {
+C51 COMPILER V9.00   INTERNET                                                              07/14/2015 22:37:13 PAGE 2   
+
+  55   2                      T_GetPoint(point);
+  56   2                      if(JugeClose(point)==1)
+  57   2                              return 0;
+  58   2                      if(JugeMin(point)==1)
+  59   2                      {
+  60   3                              //最小化响应，开启定时器中断
+  61   3                              return 0;
+  62   3                      }
+  63   2                      temp=get_temp(sndbuf);
+  64   2                      TFT_PutStr(80,110,sndbuf,Red,0);
+  65   2                      if(sock1.SOCK_STATUS&SOCK_STATUS_ON_CON)                        //如果端口1有客户连接
+  66   2                      {
+  67   3                              P4 = ~P4;
+  68   3                      }
+  69   2                      if(sock1.SOCK_STATUS&SOCK_STATUS_RECV)                          //如果端口1收到数据
+  70   2                      {
+  71   3                              recv_len = Socket_Receive_TCP(&sock1,str);      //读取数据
+  72   3                              if(recv_len>0)
+  73   3                              {
+  74   4                                      Socket_Send_TCP(&sock1,sndbuf,20);                              //发送温度数据
+  75   4                              }
+  76   3                      }
+  77   2                      Socket_Process_All(); 
+  78   2        }     
+  79   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    377    ----
+   CONSTANT SIZE    =     93    ----
+   XDATA SIZE       =   ----     116
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

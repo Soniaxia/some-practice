@@ -1,0 +1,145 @@
+C51 COMPILER V9.00   IIC                                                                   07/18/2015 17:15:56 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE IIC
+OBJECT MODULE PLACED IN iic.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE c_lib\iic.c LARGE BROWSE DEBUG OBJECTEXTEND PRINT(.\iic.lst) OBJECT(iic.obj
+                    -)
+
+line level    source
+
+   1          /*
+   2          文件名：IIC.c
+   3          功能：IIC总线驱动
+   4          创建人：肖俊
+   5          说明：使用前请根据自己硬件更改管脚定义，需结合51库使用；
+   6          可用函数：
+   7                  IIC_init();
+   8                  IIC_start();
+   9                  IIC_wr_B();
+  10                  IIC_re_B();
+  11                  IIC_stop();
+  12          */
+  13          #include <STC_12.h>
+  14          #include "..\include\iic.h"
+  15          sbit scl=P1^3;
+  16          sbit sda=P1^2;
+  17          
+  18          static void delay(u8 tenus)
+  19          {
+  20   1              u8 i,j;
+  21   1              for(i=0;i<40;i++)
+  22   1              for(j=0;j<tenus;j++);
+  23   1      }
+  24          void IIC_init(void)
+  25          {
+  26   1              P1M0|=0x08;
+  27   1              P1M1&=(~0x08);
+  28   1              scl=1;
+  29   1              delay(1);
+  30   1              sda=1;
+  31   1              delay(1);
+  32   1      }
+  33          void IIC_start(void)
+  34          {
+  35   1              sda=1;
+  36   1              delay(1);
+  37   1              scl=1;
+  38   1              delay(1);
+  39   1              sda=0;
+  40   1              delay(1);
+  41   1              scl=0;
+  42   1      }
+  43          void IIC_answer(void)
+  44          {
+  45   1              u8 i=0;
+  46   1              scl=1;
+  47   1              delay(1);
+  48   1              while((sda==1));
+  49   1              scl=0;
+  50   1              delay(1);
+  51   1      }
+  52          void IIC_reanswer(void)
+  53          {
+  54   1              sda=0;
+C51 COMPILER V9.00   IIC                                                                   07/18/2015 17:15:56 PAGE 2   
+
+  55   1              scl=1;
+  56   1              delay(1);
+  57   1              scl=0;
+  58   1              delay(1);
+  59   1      }
+  60          void IIC_stop(void)
+  61          {
+  62   1              sda=0;
+  63   1              scl=1;
+  64   1              delay(1);
+  65   1              sda=1;
+  66   1              delay(1);
+  67   1              scl=0;
+  68   1      }
+  69          
+  70          void IIC_wr_B(u8 data1)
+  71          {
+  72   1              u8 i,temp;
+  73   1              temp=data1;
+  74   1              for(i=0;i<8;i++)
+  75   1              {
+  76   2                      if((temp&0x80)==0x80)
+  77   2                      {
+  78   3                              sda=1;
+  79   3                              scl=1;
+  80   3                              delay(1);
+  81   3                              scl=0;
+  82   3                              sda=0;
+  83   3                              delay(1);
+  84   3                      }
+  85   2                      else
+  86   2                      {
+  87   3                              sda=0;
+  88   3                              scl=1;
+  89   3                              delay(1);
+  90   3                              scl=0;
+  91   3                              delay(1);
+  92   3                      }
+  93   2                      temp=temp<<1;
+  94   2              }
+  95   1         IIC_answer();
+  96   1      }
+  97          u8 IIC_re_B(void)
+  98          {
+  99   1              u8 data1,i;
+ 100   1              sda=1;
+ 101   1              for(i=0;i<8;i++)
+ 102   1              {
+ 103   2                      data1=data1<<1;
+ 104   2                      scl=1;
+ 105   2                      delay(1);
+ 106   2                      if(sda==0)
+ 107   2                      data1=~(1|~data1);
+ 108   2                      
+ 109   2                      else
+ 110   2                      data1=1|data1;
+ 111   2              
+ 112   2                      scl=0;
+ 113   2      
+ 114   2              }
+ 115   1              IIC_reanswer();
+ 116   1              return(data1);
+C51 COMPILER V9.00   IIC                                                                   07/18/2015 17:15:56 PAGE 3   
+
+ 117   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    172    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----       1
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
